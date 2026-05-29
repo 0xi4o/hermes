@@ -6,6 +6,7 @@ import (
 	"net"
 	"os"
 	"strings"
+	"sync"
 )
 
 func main() {
@@ -24,6 +25,7 @@ func main() {
 	}
 	defer l.Close()
 
+	var wg sync.WaitGroup
 	for {
 		conn, err := l.AcceptTCP()
 		if err != nil {
@@ -31,8 +33,12 @@ func main() {
 			os.Exit(1)
 		}
 
-		go handleConnection(conn)
+		wg.Go(func() {
+			handleConnection(conn)
+		})
 	}
+	wg.Wait()
+	fmt.Println("all connections closed, shutting down...")
 }
 
 func handleConnection(conn *net.TCPConn) {
