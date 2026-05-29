@@ -31,3 +31,7 @@ Note: This section is for stages 2 and beyond.
    `app/main.go`.
 1. Run `codecrafters submit` to submit your solution to CodeCrafters. Test
    output will be streamed to your terminal.
+
+# References
+
+- [Redis Serialization Protocol (RESP) Specifications](https://github.com/redis/docs/blob/main/content/develop/reference/protocol-spec.md)

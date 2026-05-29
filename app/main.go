@@ -46,6 +46,7 @@ func handleConnection(conn *net.TCPConn) {
 	scanner := bufio.NewScanner(conn)
 	for scanner.Scan() {
 		line := scanner.Text()
+		fmt.Println(line)
 		if strings.ToLower(line) == "ping" {
 			conn.Write([]byte("+PONG\r\n"))
 		}
