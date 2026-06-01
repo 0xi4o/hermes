@@ -10,8 +10,7 @@ import (
 )
 
 func main() {
-	// You can use print statements as follows for debugging, they'll be visible when running tests.
-	fmt.Println("Logs from your program will appear here!")
+	connectedClients := 0
 
 	addr, err := net.ResolveTCPAddr("tcp", "0.0.0.0:6379")
 	if err != nil {
@@ -25,6 +24,8 @@ func main() {
 	}
 	defer l.Close()
 
+	fmt.Println("Hermes is flying!!")
+
 	var wg sync.WaitGroup
 	for {
 		conn, err := l.AcceptTCP()
@@ -32,6 +33,10 @@ func main() {
 			fmt.Println("Error accepting connection: ", err.Error())
 			os.Exit(1)
 		}
+
+		connectedClients++
+
+		fmt.Printf("accepted connection from: %s, connected clients: %d\n", conn.RemoteAddr(), connectedClients)
 
 		wg.Go(func() {
 			handleConnection(conn)
@@ -45,10 +50,13 @@ func handleConnection(conn *net.TCPConn) {
 	defer conn.Close()
 	scanner := bufio.NewScanner(conn)
 	for scanner.Scan() {
-		line := scanner.Text()
+		line := strings.ToLower(scanner.Text())
 		fmt.Println(line)
-		if strings.ToLower(line) == "ping" {
+		switch line {
+		case "ping":
 			conn.Write([]byte("+PONG\r\n"))
+		default:
+			conn.Write([]byte(line))
 		}
 	}
 	if err := scanner.Err(); err != nil {
