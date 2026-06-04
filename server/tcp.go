@@ -97,7 +97,7 @@ func (server *Server) handleConnection(conn *net.TCPConn) {
 			fmt.Println(command)
 			switch command {
 			case "ping":
-				fmt.Println(resp)
+				resp.Type = core.SimpleString
 				resp.Response = "pong"
 				sendResponse(conn, resp)
 			case "echo":
