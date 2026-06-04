@@ -98,7 +98,7 @@ func (server *Server) handleConnection(conn *net.TCPConn) {
 			switch command {
 			case "ping":
 				resp.Type = core.SimpleString
-				resp.Response = "pong"
+				resp.Response = "PONG"
 				sendResponse(conn, resp)
 			case "echo":
 				resp.Response = strings.TrimSpace(args.String())
