@@ -97,17 +97,24 @@ func (server *Server) handleConnection(conn *net.TCPConn) {
 			fmt.Println(command)
 			switch command {
 			case "ping":
-				sendResponse(conn, "pong")
+				resp.Response = "pong"
+				sendResponse(conn, resp)
 			case "echo":
-				sendResponse(conn, strings.TrimSpace(args.String()))
+				resp.Response = strings.TrimSpace(args.String())
+				sendResponse(conn, resp)
 			default:
-				sendResponse(conn, string(buf[:n]))
+				resp.Response = string(buf[:n])
+				sendResponse(conn, resp)
 			}
 		}
 	}
 }
 
-func sendResponse(conn *net.TCPConn, data string) {
+func sendResponse(conn *net.TCPConn, resp core.RESP) {
+	data, err := resp.MarshalRESP()
+	if err != nil {
+		fmt.Println("error marshaling resp: ", err)
+	}
 	if _, err := conn.Write([]byte(data)); err != nil {
 		fmt.Println("error writing to connection: ", err)
 	}

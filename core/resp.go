@@ -2,6 +2,7 @@ package core
 
 import (
 	"errors"
+	"fmt"
 	"strconv"
 	"strings"
 )
@@ -17,9 +18,10 @@ const (
 )
 
 type RESP struct {
-	Type   DataType
-	Value  any
-	Offset int
+	Type     DataType
+	Value    any
+	Offset   int
+	Response any
 }
 
 func NewRESP() RESP {
@@ -27,7 +29,29 @@ func NewRESP() RESP {
 }
 
 func (resp *RESP) MarshalRESP() ([]byte, error) {
-	return []byte{}, nil
+	var data string
+	switch resp.Type {
+	case Array:
+		response, ok := resp.Response.(string)
+		if !ok {
+			return []byte{}, errors.New("cannot cast to type: string")
+		}
+		data = fmt.Sprintf("$%d\r\n%s\r\n", len(response), response)
+	// case Integer:
+	// case BulkString:
+	// 	fallthrough
+	// case SimpleError:
+	// 	fallthrough
+	case SimpleString:
+		response, ok := resp.Response.(string)
+		if !ok {
+			return []byte{}, errors.New("cannot cast to type: string")
+		}
+		data = fmt.Sprintf("+%s\r\n", response)
+	default:
+		panic(fmt.Sprintf("unexpected core.DataType: %#v", resp.Type))
+	}
+	return []byte(data), nil
 }
 
 func (resp *RESP) UnmarshalRESP(data []byte) error {
