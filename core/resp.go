@@ -21,40 +21,14 @@ type RESP struct {
 	Type     DataType
 	Value    any
 	Offset   int
-	Response any
+	Response Response
 }
 
 func NewRESP() RESP {
 	return RESP{Offset: 0}
 }
 
-func (resp *RESP) MarshalRESP() ([]byte, error) {
-	var data string
-	switch resp.Type {
-	case Array:
-		response, ok := resp.Response.(string)
-		if !ok {
-			return []byte{}, errors.New("cannot cast to type: string")
-		}
-		data = fmt.Sprintf("$%d\r\n%s\r\n", len(response), response)
-	// case Integer:
-	// case BulkString:
-	// 	fallthrough
-	// case SimpleError:
-	// 	fallthrough
-	case SimpleString:
-		response, ok := resp.Response.(string)
-		if !ok {
-			return []byte{}, errors.New("cannot cast to type: string")
-		}
-		data = fmt.Sprintf("+%s\r\n", response)
-	default:
-		panic(fmt.Sprintf("unexpected core.DataType: %#v", resp.Type))
-	}
-	return []byte(data), nil
-}
-
-func (resp *RESP) UnmarshalRESP(data []byte) error {
+func (resp *RESP) Decode(data []byte) error {
 	if len(data) == 0 {
 		return errors.New("no data")
 	}
@@ -141,7 +115,7 @@ func decodeArray(data []byte, length, delta int) (values []RESP, offset int, err
 	offset = delta
 	for range length {
 		elem := NewRESP()
-		err := elem.UnmarshalRESP(data[offset:])
+		err := elem.Decode(data[offset:])
 		if err != nil {
 			return []RESP{}, 0, err
 		}
@@ -149,4 +123,45 @@ func decodeArray(data []byte, length, delta int) (values []RESP, offset int, err
 		values = append(values, elem)
 	}
 	return values, offset, nil
+}
+
+type Response struct {
+	Type DataType
+	Data any
+}
+
+func NewResponse() Response {
+	return Response{}
+}
+
+func (response *Response) Encode() ([]byte, error) {
+	var data string
+	switch response.Type {
+	case Array:
+		panic("unimplemented")
+	case Integer:
+		panic("unimplemented")
+	case BulkString:
+		if response.Data == nil {
+			data = fmt.Sprintf("$%d\r\n", -1)
+			return []byte(data), nil
+		}
+		response, ok := response.Data.(string)
+		if !ok {
+			return []byte{}, errors.New("cannot cast to type: string")
+		}
+		data = fmt.Sprintf("$%d\r\n%s\r\n", len(response), response)
+		return []byte(data), nil
+	case SimpleError:
+		panic("unimplemented")
+	case SimpleString:
+		response, ok := response.Data.(string)
+		if !ok {
+			return []byte{}, errors.New("cannot cast to type: string")
+		}
+		data = fmt.Sprintf("+%s\r\n", response)
+		return []byte(data), nil
+	default:
+		panic(fmt.Sprintf("unexpected core.DataType: %#v", response.Type))
+	}
 }

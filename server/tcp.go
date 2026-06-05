@@ -5,23 +5,27 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"strings"
+
 	"sync"
 
 	"github.com/codecrafters-io/redis-starter-go/core"
+	"github.com/codecrafters-io/redis-starter-go/data"
 )
 
 type Server struct {
 	Host             string
 	Port             int
 	ConnectedClients int
+	KV               map[string]any
 }
 
 func NewServer(host string, port int) *Server {
+	kv := data.NewKV()
 	return &Server{
 		Host:             host,
 		Port:             port,
 		ConnectedClients: 0,
+		KV:               kv,
 	}
 }
 
@@ -66,55 +70,30 @@ func (server *Server) handleConnection(conn *net.TCPConn) {
 		}
 		resp := core.NewRESP()
 		if n > 0 {
-			err = resp.UnmarshalRESP(buf[:n])
+			err = resp.Decode(buf[:n])
 			if err != nil {
+				fmt.Println("unable to decode bytes into RESP struct: ", err)
 				break
 			}
-			var command string
-			var ok bool
-			var args strings.Builder
-			switch v := resp.Value.(type) {
-			case []core.RESP:
-				command, ok = v[0].Value.(string)
-				if !ok {
-					break
-				}
-				for i := 1; i < len(v); i++ {
-					arg, ok := v[i].Value.(string)
-					if !ok {
-						break
-					}
-					args.WriteString(arg)
-					args.WriteString(" ")
-				}
-			default:
-				command, ok = v.(string)
-				if !ok {
-					break
-				}
+			command, err := core.ParseCommand(resp)
+			if err != nil {
+				fmt.Println("unable to parse command from RESP struct: ", err)
+				break
 			}
-			command = strings.ToLower(command)
-			fmt.Println(command)
-			switch command {
-			case "ping":
-				resp.Type = core.SimpleString
-				resp.Response = "PONG"
-				sendResponse(conn, resp)
-			case "echo":
-				resp.Response = strings.TrimSpace(args.String())
-				sendResponse(conn, resp)
-			default:
-				resp.Response = string(buf[:n])
-				sendResponse(conn, resp)
+			response, err := command.Execute(server.KV)
+			if err != nil {
+				fmt.Println("unable to execute command: ", err)
+				break
 			}
+			sendResponse(conn, response)
 		}
 	}
 }
 
-func sendResponse(conn *net.TCPConn, resp core.RESP) {
-	data, err := resp.MarshalRESP()
+func sendResponse(conn *net.TCPConn, response core.Response) {
+	data, err := response.Encode()
 	if err != nil {
-		fmt.Println("error marshaling resp: ", err)
+		fmt.Println("error encoding response: ", err)
 	}
 	if _, err := conn.Write([]byte(data)); err != nil {
 		fmt.Println("error writing to connection: ", err)
