@@ -75,12 +75,12 @@ func (server *Server) handleConnection(conn *net.TCPConn) {
 				fmt.Println("unable to decode bytes into RESP struct: ", err)
 				break
 			}
-			command, err := core.ParseCommand(resp)
+			cmd, err := core.ParseCommand(resp)
 			if err != nil {
 				fmt.Println("unable to parse command from RESP struct: ", err)
 				break
 			}
-			response, err := command.Execute(server.KV)
+			response, err := cmd.Execute(server.KV)
 			if err != nil {
 				fmt.Println("unable to execute command: ", err)
 				break

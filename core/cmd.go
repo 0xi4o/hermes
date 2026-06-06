@@ -2,6 +2,8 @@ package core
 
 import (
 	"errors"
+	"fmt"
+	"strconv"
 	"strings"
 )
 
@@ -26,11 +28,13 @@ func ParseCommand(resp RESP) (Command, error) {
 		}
 		if len(v) > 1 {
 			for i := 1; i < len(v); i++ {
-				arg, ok := v[i].Value.(string)
-				if !ok {
-					return Command{}, errors.New("unable to parse arguments from resp message")
+				switch v := v[i].Value.(type) {
+				case int:
+					s := strconv.Itoa(v)
+					args = append(args, s)
+				case string:
+					args = append(args, v)
 				}
-				args = append(args, arg)
 			}
 		}
 	default:
@@ -39,7 +43,7 @@ func ParseCommand(resp RESP) (Command, error) {
 			return Command{}, errors.New("unable to parse command from resp message")
 		}
 	}
-	return Command{Cmd: cmd, Args: args}, nil
+	return Command{Cmd: strings.ToUpper(cmd), Args: args}, nil
 }
 
 func (c *Command) Execute(kv map[string]any) (Response, error) {
@@ -56,6 +60,7 @@ func (c *Command) Execute(kv map[string]any) (Response, error) {
 		}
 		response.Type = BulkString
 		response.Data = strings.TrimSpace(data)
+		return response, nil
 	case "GET":
 		if len(c.Args) > 1 {
 			return Response{}, errors.New("too many arguments for GET command")
@@ -65,23 +70,24 @@ func (c *Command) Execute(kv map[string]any) (Response, error) {
 		}
 		key := c.Args[0]
 		response.Type = BulkString
-		response.Data = kv[key]
+		data, ok := kv[key]
+		if !ok {
+			response.Data = nil
+			return response, nil
+		}
+		response.Data = data
+		return response, nil
 	case "PING":
 		response.Type = SimpleString
 		response.Data = "PONG"
+		return response, nil
 	case "SET":
-		if len(c.Args) > 2 {
-			return Response{}, errors.New("too many arguments for SET command")
-		}
-		if len(c.Args) < 2 {
-			return Response{}, errors.New("too few arguments for SET command")
-		}
 		key, value := c.Args[0], c.Args[1]
 		kv[key] = value
 		response.Type = SimpleString
 		response.Data = "OK"
+		return response, nil
 	default:
-		return Response{}, errors.New("unknown command")
+		return Response{}, fmt.Errorf("unknown command: %s", c.Cmd)
 	}
-	return response, nil
 }
