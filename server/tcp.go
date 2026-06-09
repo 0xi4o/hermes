@@ -16,16 +16,13 @@ type Server struct {
 	Host             string
 	Port             int
 	ConnectedClients int
-	KV               map[string]any
 }
 
 func NewServer(host string, port int) *Server {
-	kv := data.NewKV()
 	return &Server{
 		Host:             host,
 		Port:             port,
 		ConnectedClients: 0,
-		KV:               kv,
 	}
 }
 
@@ -39,6 +36,8 @@ func (server *Server) Start(wg *sync.WaitGroup) error {
 		return errors.New("failed to bind to port 6379")
 	}
 	defer l.Close()
+
+	data.InitStore()
 
 	fmt.Println("hermes is flying...")
 	for {
@@ -80,7 +79,7 @@ func (server *Server) handleConnection(conn *net.TCPConn) {
 				fmt.Println("unable to parse command from RESP struct: ", err)
 				break
 			}
-			response, err := cmd.Execute(server.KV)
+			response, err := cmd.Execute()
 			if err != nil {
 				fmt.Println("unable to execute command: ", err)
 				break

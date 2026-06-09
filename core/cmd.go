@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
+
+	"github.com/codecrafters-io/redis-starter-go/data"
 )
 
 type Command struct {
@@ -46,48 +49,124 @@ func ParseCommand(resp RESP) (Command, error) {
 	return Command{Cmd: strings.ToUpper(cmd), Args: args}, nil
 }
 
-func (c *Command) Execute(kv map[string]any) (Response, error) {
-	response := NewResponse()
+func (c *Command) Execute() (Response, error) {
 	switch c.Cmd {
 	case "ECHO":
-		var data string
-		if len(c.Args) > 1 {
-			data = strings.Join(c.Args, " ")
-		} else if len(c.Args) == 1 {
-			data = c.Args[0]
-		} else {
-			data = ""
-		}
-		response.Type = BulkString
-		response.Data = strings.TrimSpace(data)
-		return response, nil
+		return evalECHO(c.Args)
 	case "GET":
-		if len(c.Args) > 1 {
-			return Response{}, errors.New("too many arguments for GET command")
-		}
-		if len(c.Args) < 1 {
-			return Response{}, errors.New("too few arguments for GET command")
-		}
-		key := c.Args[0]
-		response.Type = BulkString
-		data, ok := kv[key]
-		if !ok {
-			response.Data = nil
-			return response, nil
-		}
-		response.Data = data
-		return response, nil
+		return evalGET(c.Args)
 	case "PING":
-		response.Type = SimpleString
-		response.Data = "PONG"
-		return response, nil
+		return evalPING(c.Args)
 	case "SET":
-		key, value := c.Args[0], c.Args[1]
-		kv[key] = value
-		response.Type = SimpleString
-		response.Data = "OK"
-		return response, nil
+		return evalSET(c.Args)
+	case "TTL":
+		return evalTTL(c.Args)
 	default:
 		return Response{}, fmt.Errorf("unknown command: %s", c.Cmd)
 	}
+}
+
+func evalECHO(args []string) (Response, error) {
+	var data string
+	if len(args) > 1 {
+		data = strings.Join(args, " ")
+	} else if len(args) == 1 {
+		data = args[0]
+	} else {
+		data = ""
+	}
+	return Response{Type: BulkString, Data: strings.TrimSpace(data)}, nil
+}
+
+func evalGET(args []string) (Response, error) {
+	if len(args) != 1 {
+		return Response{}, errors.New("wrong number of arguments for GET")
+	}
+
+	key := args[0]
+
+	item, err := data.Store.Cache.Get(key)
+	if err != nil {
+		return Response{Type: BulkString}, nil
+	}
+
+	if item.ExpiresAt != -1 && item.ExpiresAt <= time.Now().UnixMilli() {
+		return Response{Type: BulkString}, nil
+	}
+
+	return Response{Type: BulkString, Data: item.Value}, nil
+}
+
+func evalPING(args []string) (Response, error) {
+	return Response{Type: SimpleString, Data: "PONG"}, nil
+}
+
+func evalSET(args []string) (Response, error) {
+	if len(args) <= 1 {
+		return Response{}, errors.New("wrong number of arguments for SET")
+	}
+
+	key, value := args[0], args[1]
+
+	var expiryDurationMs int64 = -1
+
+	for i := 2; i < len(args); i++ {
+		switch args[i] {
+		case "EX", "ex":
+			i++
+			if i == len(args) {
+				return Response{}, errors.New("syntax error")
+			}
+
+			expiryDurationSec, err := strconv.ParseInt(args[i], 10, 64)
+			if err != nil {
+				return Response{}, errors.New("EX value is not an integer or out of range")
+			}
+			expiryDurationMs = expiryDurationSec * 1000
+			data.Store.Cache.Put(key, value, expiryDurationMs)
+			return Response{Type: SimpleString, Data: "OK"}, nil
+		case "PX", "px":
+			i++
+			if i == len(args) {
+				return Response{}, errors.New("syntax error")
+			}
+
+			expiryDurationMs, err := strconv.ParseInt(args[i], 10, 64)
+			if err != nil {
+				return Response{}, errors.New("PX value is not an integer or out of range")
+			}
+			data.Store.Cache.Put(key, value, expiryDurationMs)
+			return Response{Type: SimpleString, Data: "OK"}, nil
+		default:
+			return Response{}, errors.New("syntax error, unknown argument for SET")
+		}
+	}
+
+	data.Store.Cache.Put(key, value, expiryDurationMs)
+	return Response{Type: SimpleString, Data: "OK"}, nil
+}
+
+func evalTTL(args []string) (Response, error) {
+	if len(args) != 1 {
+		return Response{}, errors.New("wrong number of arguments for TTL")
+	}
+
+	key := args[0]
+
+	item, err := data.Store.Cache.Get(key)
+	if err != nil {
+		return Response{Type: Integer, Data: int64(-2)}, nil
+	}
+
+	if item.ExpiresAt == -1 {
+		return Response{Type: Integer, Data: int64(-1)}, nil
+	}
+
+	durationMs := item.ExpiresAt - time.Now().UnixMilli()
+
+	if durationMs < 0 {
+		return Response{Type: Integer, Data: int64(-2)}, nil
+	}
+
+	return Response{Type: Integer, Data: int64(durationMs / 1000)}, nil
 }

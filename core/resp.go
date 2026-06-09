@@ -7,6 +7,8 @@ import (
 	"strings"
 )
 
+const RESP_NIL string = "$-1\r\n"
+
 type DataType int
 
 const (
@@ -140,26 +142,30 @@ func (response *Response) Encode() ([]byte, error) {
 	case Array:
 		panic("unimplemented")
 	case Integer:
-		panic("unimplemented")
+		body, ok := response.Data.(int64)
+		if !ok {
+			return []byte{}, errors.New("cannot cast to type: int64")
+		}
+		data = fmt.Sprintf(":%d\r\n", body)
+		return []byte(data), nil
 	case BulkString:
 		if response.Data == nil {
-			data = fmt.Sprintf("$%d\r\n", -1)
-			return []byte(data), nil
+			return []byte(RESP_NIL), nil
 		}
-		response, ok := response.Data.(string)
+		body, ok := response.Data.(string)
 		if !ok {
 			return []byte{}, errors.New("cannot cast to type: string")
 		}
-		data = fmt.Sprintf("$%d\r\n%s\r\n", len(response), response)
+		data = fmt.Sprintf("$%d\r\n%s\r\n", len(body), body)
 		return []byte(data), nil
 	case SimpleError:
 		panic("unimplemented")
 	case SimpleString:
-		response, ok := response.Data.(string)
+		body, ok := response.Data.(string)
 		if !ok {
 			return []byte{}, errors.New("cannot cast to type: string")
 		}
-		data = fmt.Sprintf("+%s\r\n", response)
+		data = fmt.Sprintf("+%s\r\n", body)
 		return []byte(data), nil
 	default:
 		panic(fmt.Sprintf("unexpected core.DataType: %#v", response.Type))
