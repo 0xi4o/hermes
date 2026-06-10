@@ -124,27 +124,22 @@ func evalLRANGE(args []string) (Response, error) {
 		return Response{Type: Array, Data: []string{}}, nil
 	}
 
-	if start > items.Length {
+	if start > stop || start >= items.Length {
 		return Response{Type: Array, Data: []string{}}, nil
 	}
-
 	if start < 0 {
 		start = max(0, start+items.Length)
 	}
-
 	if stop < 0 {
-		stop = items.Length + stop + 1
-	} else if stop > items.Length {
-		stop = items.Length
-	} else if stop < items.Length {
-		stop += 1
-	} else {
-		stop -= 1
+		stop = max(0, stop+items.Length)
+	}
+	if stop >= items.Length {
+		stop = items.Length - 1
 	}
 
 	switch v := items.Value.(type) {
 	case []string:
-		return Response{Type: Array, Data: v[start:stop]}, nil
+		return Response{Type: Array, Data: v[start : stop+1]}, nil
 	default:
 		return Response{}, errors.New("value is not a list")
 	}
