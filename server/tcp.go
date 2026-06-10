@@ -82,6 +82,7 @@ func (server *Server) handleConnection(conn *net.TCPConn) {
 			response, err := cmd.Execute()
 			if err != nil {
 				fmt.Println("unable to execute command: ", err)
+				sendResponse(conn, response)
 				break
 			}
 			fmt.Println(data.Store.Cache)
