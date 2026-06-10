@@ -2,6 +2,7 @@ package data
 
 import (
 	"errors"
+	"slices"
 	"sync"
 	"time"
 )
@@ -51,19 +52,38 @@ func NewCache() Cache {
 	}
 }
 
-// TODO: return error
-func (cache *Cache) Append(key string, value []string) error {
+func (cache *Cache) Append(key string, values []string) error {
 	_, err := Store.Cache.Get(key)
 	if err != nil {
 		Store.Cache.Put(key, []string{}, -1)
 	}
 	switch items := Store.Cache.Items[key].Value.(type) {
 	case []string:
-		Store.Cache.Items[key].Value = append(items, value...)
+		Store.Cache.Items[key].Value = append(items, values...)
 		Store.Cache.Items[key].Length = int64(len(Store.Cache.Items[key].Value.([]string)))
 		return nil
 	default:
 		return errors.New("value is not a list")
+	}
+}
+
+func (cache *Cache) Prepend(key string, values []string) error {
+	_, err := Store.Cache.Get(key)
+	if err != nil {
+		Store.Cache.Put(key, []string{}, -1)
+	}
+	switch items := Store.Cache.Items[key].Value.(type) {
+	case []string:
+		newItems := []string{}
+		slices.Reverse(values)
+		newItems = append(newItems, values...)
+		newItems = append(newItems, items...)
+		Store.Cache.Items[key].Value = newItems
+		Store.Cache.Items[key].Length = int64(len(Store.Cache.Items[key].Value.([]string)))
+		return nil
+	default:
+		return errors.New("value is not a list")
+
 	}
 }
 
