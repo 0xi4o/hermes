@@ -132,7 +132,7 @@ func evalLRANGE(args []string) (Response, error) {
 	}
 
 	if stop < 0 {
-		stop += items.Length
+		stop = items.Length + stop + 1
 	} else if stop > items.Length {
 		stop = items.Length
 	} else if stop < items.Length {
