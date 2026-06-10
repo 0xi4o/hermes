@@ -57,6 +57,8 @@ func (c *Command) Execute() (Response, error) {
 		return evalGET(c.Args)
 	case "PING":
 		return evalPING(c.Args)
+	case "RPUSH":
+		return evalRPUSH(c.Args)
 	case "SET":
 		return evalSET(c.Args)
 	case "TTL":
@@ -99,6 +101,25 @@ func evalGET(args []string) (Response, error) {
 
 func evalPING(args []string) (Response, error) {
 	return Response{Type: SimpleString, Data: "PONG"}, nil
+}
+
+func evalRPUSH(args []string) (Response, error) {
+	if len(args) <= 1 {
+		return Response{}, errors.New("wrong number of arguments for SET")
+	}
+
+	key := args[0]
+
+	err := data.Store.Cache.Append(key, args[1:])
+	if err != nil {
+		return Response{}, err
+	}
+	items, err := data.Store.Cache.Get(key)
+	if err != nil {
+		return Response{}, err
+	}
+
+	return Response{Type: Integer, Data: items.Length}, nil
 }
 
 func evalSET(args []string) (Response, error) {
