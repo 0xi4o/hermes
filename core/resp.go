@@ -140,7 +140,19 @@ func (response *Response) Encode() ([]byte, error) {
 	var data string
 	switch response.Type {
 	case Array:
-		panic("unimplemented")
+		// TODO: support other array items of non-string data types
+		body, ok := response.Data.([]string)
+		if !ok {
+			return []byte{}, errors.New("cannot cast to type: []string")
+		}
+		var data strings.Builder
+		first := fmt.Sprintf("*%d\r\n", len(body))
+		data.WriteString(first)
+		for _, s := range body {
+			part := fmt.Sprintf("$%d\r\n%s\r\n", len(s), s)
+			data.WriteString(part)
+		}
+		return []byte(data.String()), nil
 	case Integer:
 		body, ok := response.Data.(int64)
 		if !ok {
@@ -159,7 +171,12 @@ func (response *Response) Encode() ([]byte, error) {
 		data = fmt.Sprintf("$%d\r\n%s\r\n", len(body), body)
 		return []byte(data), nil
 	case SimpleError:
-		panic("unimplemented")
+		body, ok := response.Data.(string)
+		if !ok {
+			return []byte{}, errors.New("cannot cast to type: string")
+		}
+		data = fmt.Sprintf("-%s\r\n", body)
+		return []byte(data), nil
 	case SimpleString:
 		body, ok := response.Data.(string)
 		if !ok {

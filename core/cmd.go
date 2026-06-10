@@ -102,18 +102,52 @@ func evalGET(args []string) (Response, error) {
 }
 
 func evalLRANGE(args []string) (Response, error) {
-	if len(args) != 1 {
+	if len(args) != 3 {
 		return Response{}, errors.New("wrong number of arguments for LRANGE")
 	}
 
 	key := args[0]
+
+	start, err := strconv.ParseInt(args[1], 10, 64)
+	if err != nil {
+		return Response{}, errors.New("wrong number of arguments for LRANGE")
+	}
+
+	stop, err := strconv.ParseInt(args[2], 10, 64)
+	if err != nil {
+		return Response{}, errors.New("wrong number of arguments for LRANGE")
+	}
 
 	items, err := data.Store.Cache.Get(key)
 	if err != nil {
 		return Response{Type: BulkString}, nil
 	}
 
-	return Response{Type: Integer, Data: items.Length}, nil
+	if start > items.Length {
+		return Response{Type: Array, Data: []string{}}, nil
+	}
+
+	if start < 0 {
+		start += items.Length
+	}
+
+	if stop > items.Length {
+		stop = items.Length - 1
+	}
+
+	if stop < 0 {
+		stop += items.Length
+	}
+
+	fmt.Println(start)
+	fmt.Println(stop)
+	switch v := items.Value.(type) {
+	case []string:
+		fmt.Println(v[start:stop])
+		return Response{Type: Array, Data: v[start:stop]}, nil
+	default:
+		return Response{}, errors.New("value is not a list")
+	}
 }
 
 func evalPING(args []string) (Response, error) {
