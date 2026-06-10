@@ -115,7 +115,7 @@ func evalLLEN(args []string) (Response, error) {
 
 	items, err := data.Store.Cache.Get(key)
 	if err != nil {
-		return Response{}, err
+		return Response{Type: SimpleError, Data: err.Error()}, err
 	}
 
 	return Response{Type: Integer, Data: items.Length}, nil
