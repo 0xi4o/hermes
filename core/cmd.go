@@ -134,7 +134,7 @@ func evalLRANGE(args []string) (Response, error) {
 	if stop < 0 {
 		stop += items.Length
 	} else if stop > items.Length {
-		stop = items.Length - 1
+		stop = items.Length
 	} else if stop < items.Length {
 		stop += 1
 	} else {
@@ -149,7 +149,7 @@ func evalLRANGE(args []string) (Response, error) {
 	}
 }
 
-func evalPING(args []string) (Response, error) {
+func evalPING(_ []string) (Response, error) {
 	return Response{Type: SimpleString, Data: "PONG"}, nil
 }
 
