@@ -55,6 +55,8 @@ func (c *Command) Execute() (Response, error) {
 		return evalECHO(c.Args)
 	case "GET":
 		return evalGET(c.Args)
+	case "LRANGE":
+		return evalLRANGE(c.Args)
 	case "PING":
 		return evalPING(c.Args)
 	case "RPUSH":
@@ -97,6 +99,21 @@ func evalGET(args []string) (Response, error) {
 	}
 
 	return Response{Type: BulkString, Data: item.Value}, nil
+}
+
+func evalLRANGE(args []string) (Response, error) {
+	if len(args) != 1 {
+		return Response{}, errors.New("wrong number of arguments for LRANGE")
+	}
+
+	key := args[0]
+
+	items, err := data.Store.Cache.Get(key)
+	if err != nil {
+		return Response{Type: BulkString}, nil
+	}
+
+	return Response{Type: Integer, Data: items.Length}, nil
 }
 
 func evalPING(args []string) (Response, error) {
