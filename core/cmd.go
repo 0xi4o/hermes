@@ -3,6 +3,7 @@ package core
 import (
 	"errors"
 	"fmt"
+	// "math"
 	"strconv"
 	"strings"
 	"time"
@@ -128,7 +129,7 @@ func evalLRANGE(args []string) (Response, error) {
 	}
 
 	if start < 0 {
-		start += items.Length
+		start = max(0, start+items.Length)
 	}
 
 	if stop < 0 {
