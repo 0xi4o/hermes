@@ -120,7 +120,7 @@ func evalLRANGE(args []string) (Response, error) {
 
 	items, err := data.Store.Cache.Get(key)
 	if err != nil {
-		return Response{Type: BulkString}, nil
+		return Response{Type: Array, Data: []string{}}, nil
 	}
 
 	if start > items.Length {
