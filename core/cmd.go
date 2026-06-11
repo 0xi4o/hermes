@@ -125,7 +125,7 @@ func evalLLEN(args []string) (Response, error) {
 
 func evalLPOP(args []string) (Response, error) {
 	if len(args) <= 1 {
-		return Response{}, errors.New("wrong number of arguments for LPOP")
+		return Response{Type: BulkString}, errors.New("wrong number of arguments for LPOP")
 	}
 
 	key := args[0]
