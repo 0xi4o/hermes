@@ -58,6 +58,8 @@ func (c *Command) Execute() (Response, error) {
 		return evalGET(c.Args)
 	case "LLEN":
 		return evalLLEN(c.Args)
+	case "LPOP":
+		return evalLPOP(c.Args)
 	case "LPUSH":
 		return evalLPUSH(c.Args)
 	case "LRANGE":
@@ -121,6 +123,25 @@ func evalLLEN(args []string) (Response, error) {
 	return Response{Type: Integer, Data: items.Length}, nil
 }
 
+func evalLPOP(args []string) (Response, error) {
+	if len(args) <= 1 {
+		return Response{}, errors.New("wrong number of arguments for LPOP")
+	}
+
+	key := args[0]
+
+	count, err := strconv.ParseInt(args[1], 10, 64)
+	if err != nil {
+		return Response{}, errors.New("count is not a number")
+	}
+
+	items, err := data.Store.Cache.Pop(key, count)
+	if err != nil {
+		return Response{Type: BulkString}, err
+	}
+	return Response{Type: Array, Data: items}, nil
+}
+
 func evalLPUSH(args []string) (Response, error) {
 	if len(args) <= 1 {
 		return Response{}, errors.New("wrong number of arguments for SET")
@@ -149,12 +170,12 @@ func evalLRANGE(args []string) (Response, error) {
 
 	start, err := strconv.ParseInt(args[1], 10, 64)
 	if err != nil {
-		return Response{}, errors.New("wrong number of arguments for LRANGE")
+		return Response{}, errors.New("start is not a number")
 	}
 
 	stop, err := strconv.ParseInt(args[2], 10, 64)
 	if err != nil {
-		return Response{}, errors.New("wrong number of arguments for LRANGE")
+		return Response{}, errors.New("stop is not a number")
 	}
 
 	items, err := data.Store.Cache.Get(key)

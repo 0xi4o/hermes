@@ -52,6 +52,7 @@ func NewCache() Cache {
 	}
 }
 
+// TODO: combine append and prepend into one push method receiver and decide based on head/tail
 func (cache *Cache) Append(key string, values []string) error {
 	_, err := Store.Cache.Get(key)
 	if err != nil {
@@ -84,6 +85,23 @@ func (cache *Cache) Prepend(key string, values []string) error {
 	default:
 		return errors.New("value is not a list")
 
+	}
+}
+
+// TODO: support rpop
+func (cache *Cache) Pop(key string, count int64) ([]string, error) {
+	_, err := Store.Cache.Get(key)
+	if err != nil {
+		return []string{}, errors.New("key not found")
+	}
+	switch items := Store.Cache.Items[key].Value.(type) {
+	case []string:
+		popped := items[:count]
+		Store.Cache.Items[key].Value = items[count:]
+		Store.Cache.Items[key].Length = int64(len(Store.Cache.Items[key].Value.([]string)))
+		return popped, nil
+	default:
+		return []string{}, errors.New("value is not a list")
 	}
 }
 
