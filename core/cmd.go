@@ -124,23 +124,34 @@ func evalLLEN(args []string) (Response, error) {
 }
 
 func evalLPOP(args []string) (Response, error) {
-	if len(args) <= 1 {
-		err := errors.New("wrong number of arguments for LPOP")
+	var err error
+	if len(args) < 1 {
+		err = errors.New("wrong number of arguments for LPOP")
 		return Response{Type: BulkString, Data: err.Error()}, err
 	}
 
 	key := args[0]
+	var count int64
 
-	count, err := strconv.ParseInt(args[1], 10, 64)
-	if err != nil {
-		return Response{}, errors.New("count is not a number")
+	if len(args) == 1 {
+		count = 1
+		items, err := data.Store.Cache.Pop(key, count)
+		if err != nil {
+			return Response{Type: BulkString}, err
+		}
+		return Response{Type: BulkString, Data: items[0]}, nil
+	} else {
+		count, err = strconv.ParseInt(args[1], 10, 64)
+		if err != nil {
+			return Response{}, errors.New("count is not a number")
+		}
+		items, err := data.Store.Cache.Pop(key, count)
+		if err != nil {
+			return Response{Type: BulkString}, err
+		}
+		return Response{Type: Array, Data: items}, nil
 	}
 
-	items, err := data.Store.Cache.Pop(key, count)
-	if err != nil {
-		return Response{Type: BulkString}, err
-	}
-	return Response{Type: Array, Data: items}, nil
 }
 
 func evalLPUSH(args []string) (Response, error) {
