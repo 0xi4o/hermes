@@ -38,3 +38,11 @@ Note: This section is for stages 2 and beyond.
 - [[https://github.com/redis/redis-specifications/blob/master/protocol/RESP2.md][RESP2]]
 - [[https://github.com/redis/redis-specifications/blob/master/protocol/RESP3.md][RESP3]]
 - [[https://www.youtube.com/playlist?list=PLsdq-3Z1EPT0eElcdOON9fdaeaQjlyXDt][Redis Internals by Arpit Bhayani]]
+- [[https://www.scottklement.com/rpg/socktut/nonblocking.html][Blocking vs Non-blocking Sockets]]
+- [[https://jvns.ca/blog/2017/06/03/async-io-on-linux--select--poll--and-epoll/][Async IO on Linux: select, poll, and epoll]]
+- [[https://www.pauladamsmith.com/articles/redis-under-the-hood.html][Redis: under the hood]]
+
+* TODO
+- [] Write tests
+- [] Make errors comparible with Redis specifications
+- [] Add detailed comments similar to Redis codebase
