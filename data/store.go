@@ -3,7 +3,6 @@ package data
 import (
 	"errors"
 	"slices"
-	"sync"
 	"time"
 )
 
@@ -39,16 +38,13 @@ func NewCacheItem(value any, durationMs int64) *CacheItem {
 
 type Cache struct {
 	Items map[string]*CacheItem
-	mu    *sync.Mutex
 }
 
 func NewCache() Cache {
 	items := make(map[string]*CacheItem)
-	var mu *sync.Mutex
 
 	return Cache{
 		Items: items,
-		mu:    mu,
 	}
 }
 
