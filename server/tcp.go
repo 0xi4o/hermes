@@ -12,10 +12,21 @@ import (
 	"github.com/codecrafters-io/redis-starter-go/data"
 )
 
+type commandResult struct {
+	response core.Response
+	err      error
+}
+
+type commandRequest struct {
+	cmd      core.Command
+	response chan commandResult
+}
+
 type Server struct {
 	Host             string
 	Port             int
 	ConnectedClients int
+	cmdCh            chan commandRequest
 }
 
 func NewServer(host string, port int) *Server {
@@ -23,6 +34,7 @@ func NewServer(host string, port int) *Server {
 		Host:             host,
 		Port:             port,
 		ConnectedClients: 0,
+		cmdCh:            make(chan commandRequest),
 	}
 }
 
@@ -38,6 +50,13 @@ func (server *Server) Start(wg *sync.WaitGroup) error {
 	defer l.Close()
 
 	data.InitStore()
+
+	go func() {
+		for req := range server.cmdCh {
+			resp, err := req.cmd.Execute()
+			req.response <- commandResult{resp, err}
+		}
+	}()
 
 	fmt.Println("hermes is flying...")
 	for {
@@ -79,14 +98,21 @@ func (server *Server) handleConnection(conn *net.TCPConn) {
 				fmt.Println("unable to parse command from RESP struct: ", err)
 				break
 			}
-			response, err := cmd.Execute()
-			if err != nil {
+			// response, err := cmd.Execute()
+			// if err != nil {
+			// 	fmt.Println("unable to execute command: ", err)
+			// 	sendResponse(conn, response)
+			// 	break
+			// }
+			resultCh := make(chan commandResult, 1)
+			server.cmdCh <- commandRequest{cmd: cmd, response: resultCh}
+			result := <-resultCh
+			if result.err != nil {
 				fmt.Println("unable to execute command: ", err)
-				sendResponse(conn, response)
+				sendResponse(conn, result.response)
 				break
 			}
-			fmt.Println(data.Store.Cache)
-			sendResponse(conn, response)
+			sendResponse(conn, result.response)
 		}
 	}
 }
